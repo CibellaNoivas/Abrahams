@@ -28,7 +28,7 @@ on:
         required: false
         type: string
       notes:
-        description: "Observacoes do atendimento"
+        description: "Observações do atendimento"
         required: false
         type: string
       event_date:
@@ -66,6 +66,7 @@ jobs:
       BOOKING_PHONE: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.phone || inputs.phone }}
       BOOKING_NOTES: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.notes || inputs.notes }}
       BOOKING_EVENT_DATE: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.event_date || inputs.event_date }}
+      APPOINTMENT_DURATION_MINUTES: "90"
 
     steps:
       - name: Checkout
@@ -130,28 +131,35 @@ jobs:
             return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}T${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:00-03:00`;
           };
 
-          const start = addMinutes(-5);
-          const end = addMinutes(75);
+          const durationMinutes = Number(process.env.APPOINTMENT_DURATION_MINUTES || 90);
+          const start = addMinutes(0);
+          const end = addMinutes(durationMinutes);
           const name = process.env.BOOKING_NAME.trim();
           const segment = process.env.BOOKING_SEGMENT.trim();
 
           const event = {
             summary: `${segment} - ${name}`,
-            location: "R. Joao Amaro, 31 - Cidade Moncoes, Sao Paulo - SP, 04583-030",
+            location: "R. João Amaro, 31 - Cidade Monções, São Paulo - SP, 04583-030",
             description: [
               "Agendamento Abrahams by Cibella Group",
               "",
               `Cliente: ${name}`,
               `Segmento: ${segment}`,
-              `Horario escolhido: ${selectedDate} ${selectedTime}`,
-              `Janela no calendario: ${start} ate ${end}`,
+              `Horário escolhido: ${selectedDate} ${selectedTime}`,
+              `Janela no calendário: ${start} até ${end}`,
               process.env.BOOKING_EMAIL ? `E-mail: ${process.env.BOOKING_EMAIL}` : "",
               process.env.BOOKING_PHONE ? `WhatsApp: ${process.env.BOOKING_PHONE}` : "",
               process.env.BOOKING_EVENT_DATE ? `Data do evento: ${process.env.BOOKING_EVENT_DATE}` : "",
-              process.env.BOOKING_NOTES ? `Observacoes: ${process.env.BOOKING_NOTES}` : ""
+              process.env.BOOKING_NOTES ? `Observações: ${process.env.BOOKING_NOTES}` : ""
             ].filter(Boolean).join("\n"),
-            start: { dateTime: start, timeZone: "America/Sao_Paulo" },
-            end: { dateTime: end, timeZone: "America/Sao_Paulo" },
+            start: {
+              dateTime: start,
+              timeZone: "America/Sao_Paulo"
+            },
+            end: {
+              dateTime: end,
+              timeZone: "America/Sao_Paulo"
+            },
             reminders: {
               useDefault: false,
               overrides: [
