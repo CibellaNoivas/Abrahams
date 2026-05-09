@@ -12,6 +12,7 @@ const home = process.env.USERPROFILE || process.env.HOME || "";
 const timeZone = "America/Sao_Paulo";
 const privateDataRoot = join(process.env.LOCALAPPDATA || home || root, "AbrahamsSite");
 const bookingsPath = join(privateDataRoot, "agendamentos.json");
+const catalogPath = join(privateDataRoot, "catalogo.json");
 const availabilityDays = 28;
 const appointmentDurationMinutes = 90;
 const weekdaySlots = buildTimeSlots("09:00", "18:00", appointmentDurationMinutes);
@@ -31,8 +32,11 @@ const supportedSegments = new Set([
   "Consultoria completa"
 ]);
 let bookingWriteQueue = Promise.resolve();
+let catalogWriteQueue = Promise.resolve();
 let inMemoryBookings = [];
+let inMemoryCatalog = [];
 let diskPersistenceEnabled = true;
+let catalogDiskPersistenceEnabled = true;
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -103,6 +107,65 @@ const mediaFiles = {
     join(generatedRoot, "ig_0aa6ea8a7c30c99a0169fbf7bc3a408198860e734f8879d70b.png")
   )
 };
+
+const defaultCatalogItems = [
+  {
+    id: "ternos",
+    title: "Ternos",
+    label: "Cerimonial",
+    image: "/media/look-business.png",
+    text: "Ternos slim e clássicos para casamento, eventos e rotina executiva com caimento preciso.",
+    tags: ["Slim", "Clássico", "Sob medida visual"]
+  },
+  {
+    id: "calcas-de-alfaiataria",
+    title: "Calças de alfaiataria",
+    label: "Base",
+    image: "/media/event-look.png",
+    text: "Calças sociais em cortes atuais, pensadas para compor traje completo ou smart casual.",
+    tags: ["Social", "Reta", "Slim"]
+  },
+  {
+    id: "blazers",
+    title: "Blazers",
+    label: "Smart",
+    image: "/media/look-casual.png",
+    text: "Blazers modernos para elevar camisa, malha leve ou composição de evento sem excesso.",
+    tags: ["Navy", "Grafite", "Texturizado"]
+  },
+  {
+    id: "camisas",
+    title: "Camisas",
+    label: "Essencial",
+    image: "/media/shirts.png",
+    text: "Camisas brancas, azuis e bases formais para noivos, padrinhos e atendimento corporativo.",
+    tags: ["Colarinho", "Punho", "Algodão"]
+  },
+  {
+    id: "gravatas-borboleta",
+    title: "Gravatas-borboleta",
+    label: "Black tie",
+    image: "/media/navy-fabric.png",
+    text: "Papillons para cerimônias noturnas, black tie e looks com assinatura mais formal.",
+    tags: ["Preto", "Navy", "Cetim"]
+  },
+  {
+    id: "gravatas",
+    title: "Gravatas",
+    label: "Formal",
+    image: "/media/collection-detail.png",
+    text: "Gravatas discretas para casamento, formatura, eventos corporativos e recepções.",
+    tags: ["Lisa", "Textura", "Champagne"]
+  },
+  {
+    id: "abotoaduras",
+    title: "Abotoaduras",
+    label: "Detalhe",
+    image: "/media/abrahams-atelier-dark.png",
+    text: "Abotoaduras e pequenos acabamentos para finalizar o traje com presença silenciosa.",
+    tags: ["Metal", "Cerimônia", "Presente"]
+  }
+];
 
 function resolvePath(url) {
   const cleanUrl = decodeURIComponent(url.split("?")[0]);
@@ -256,7 +319,8 @@ function renderAdminPage(bookings) {
     .notes { margin:0 0 18px; color:rgba(246,242,234,.78); line-height:1.65; }
     .button { display:inline-flex; min-height:42px; align-items:center; justify-content:center; border:1px solid var(--gold); color:#061225; background:var(--gold); padding:0 16px; text-decoration:none; text-transform:uppercase; letter-spacing:.12em; font-weight:900; font-size:12px; border-radius:6px; }
     .empty { border:1px dashed var(--line); padding:32px; color:rgba(246,242,234,.72); }
-    @media (max-width: 780px) { header, .booking-top { display:block; } dl { grid-template-columns:1fr; } strong { display:block; margin-top:14px; } }
+    .admin-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
+    @media (max-width: 780px) { header, .booking-top { display:block; } dl { grid-template-columns:1fr; } strong { display:block; margin-top:14px; } .admin-actions { justify-content:flex-start; margin-top:18px; } }
   </style>
 </head>
 <body>
@@ -266,10 +330,249 @@ function renderAdminPage(bookings) {
         <p class="count">Painel privado</p>
         <h1>ABRAHAMS</h1>
       </div>
-      <p class="count">${ordered.length} agendamento${ordered.length === 1 ? "" : "s"}</p>
+      <div class="admin-actions">
+        <a class="button" href="/admin/catalogo?key=${encodeURIComponent(adminKey)}">Editar catalogo</a>
+        <p class="count">${ordered.length} agendamento${ordered.length === 1 ? "" : "s"}</p>
+      </div>
     </header>
     <section class="grid">${rows || '<p class="empty">Ainda nao ha agendamentos recebidos.</p>'}</section>
   </main>
+</body>
+</html>`;
+}
+
+function renderCatalogAdminPage(items, key) {
+  const safeItems = JSON.stringify(items.map(publicCatalogItem)).replace(/</g, "\\u003c");
+  const safeKey = JSON.stringify(key || "");
+  const mediaOptions = JSON.stringify(Object.keys(mediaFiles));
+
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catalogo | Abrahams</title>
+  <style>
+    :root { color-scheme: dark; --navy:#071744; --deep:#050914; --ink:#f8f3ea; --muted:rgba(248,243,234,.68); --gold:#cfad68; --line:rgba(248,243,234,.16); --panel:rgba(248,243,234,.07); }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: Manrope, Inter, Arial, sans-serif; background:radial-gradient(circle at 12% -10%, #22365f, var(--navy) 38%, var(--deep)); color:var(--ink); }
+    main { width:min(1180px, calc(100% - 32px)); margin:0 auto; padding:42px 0 60px; }
+    header { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; padding-bottom:22px; margin-bottom:22px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-family: Georgia, serif; font-weight:400; letter-spacing:.18em; font-size:clamp(30px, 5vw, 58px); }
+    h2 { margin:0; font-size:20px; font-weight:700; }
+    p { color:var(--muted); line-height:1.65; }
+    a { color:inherit; }
+    .kicker, .counter { color:var(--gold); text-transform:uppercase; letter-spacing:.14em; font-size:12px; font-weight:900; margin:0 0 8px; }
+    .toolbar { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin:0 0 18px; }
+    .toolbar-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    button, .link-button { min-height:44px; border-radius:7px; border:1px solid var(--line); background:rgba(248,243,234,.08); color:var(--ink); padding:0 16px; font:800 12px/1 Manrope, Arial, sans-serif; text-transform:uppercase; letter-spacing:.12em; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+    button.primary { background:var(--gold); border-color:var(--gold); color:#061225; }
+    button.danger { color:#ffcfbe; border-color:rgba(255,120,85,.35); }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+    .status { min-height:28px; margin:8px 0 18px; color:var(--muted); }
+    .status.ok { color:#bbf7d0; }
+    .status.error { color:#fecaca; }
+    .list { display:grid; gap:16px; }
+    .product { display:grid; grid-template-columns:240px 1fr; gap:18px; border:1px solid var(--line); border-radius:8px; background:var(--panel); padding:16px; backdrop-filter:blur(18px); }
+    .preview { min-height:260px; border-radius:6px; overflow:hidden; border:1px solid var(--line); background:#111927; }
+    .preview img { width:100%; height:100%; object-fit:cover; display:block; }
+    .product-head { display:flex; align-items:start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .product-form { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+    label { display:grid; gap:7px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em; font-size:11px; font-weight:900; }
+    label.wide { grid-column:1 / -1; }
+    input, textarea { width:100%; border:1px solid var(--line); border-radius:6px; background:rgba(248,243,234,.92); color:#111827; padding:13px 14px; font:600 14px/1.4 Manrope, Arial, sans-serif; outline:none; }
+    textarea { min-height:96px; resize:vertical; }
+    input:focus, textarea:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(207,173,104,.18); }
+    .help { color:var(--muted); font-size:13px; margin:18px 0 0; }
+    @media (max-width: 840px) {
+      header, .toolbar { display:block; }
+      .toolbar-actions { margin-top:14px; }
+      .product { grid-template-columns:1fr; }
+      .preview { min-height:220px; }
+      .product-form { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="kicker">Painel privado</p>
+        <h1>CATALOGO</h1>
+        <p>Adicione, remova ou edite os produtos que aparecem na secao Catalogo do site.</p>
+      </div>
+      <p class="counter"><span id="count">0</span> produtos</p>
+    </header>
+    <section class="toolbar" aria-label="Acoes do catalogo">
+      <div class="toolbar-actions">
+        <button type="button" id="add-product">Adicionar produto</button>
+        <button type="button" class="primary" id="save-catalog">Salvar catalogo</button>
+      </div>
+      <div class="toolbar-actions">
+        <a class="link-button" href="/?catalogo=1#catalogo" target="_blank" rel="noopener noreferrer">Ver site</a>
+        <a class="link-button" href="/admin?key=${encodeURIComponent(key || "")}">Agendamentos</a>
+      </div>
+    </section>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <datalist id="media-options"></datalist>
+    <section id="catalog-list" class="list" aria-label="Produtos do catalogo"></section>
+    <p class="help">Imagem pode ser um caminho existente como /media/look-business.png ou uma URL https de imagem. Depois de salvar, atualize o site e a vitrine muda automaticamente.</p>
+  </main>
+  <script>
+    const adminKey = ${safeKey};
+    const mediaOptions = ${mediaOptions};
+    let items = ${safeItems};
+    const list = document.getElementById("catalog-list");
+    const statusEl = document.getElementById("status");
+    const countEl = document.getElementById("count");
+    const saveButton = document.getElementById("save-catalog");
+    const optionList = document.getElementById("media-options");
+
+    mediaOptions.forEach((path) => {
+      const option = document.createElement("option");
+      option.value = path;
+      optionList.append(option);
+    });
+
+    function setStatus(message, type) {
+      statusEl.textContent = message || "";
+      statusEl.className = "status " + (type || "");
+    }
+
+    function makeField(labelText, field, value, wide, multiline) {
+      const label = document.createElement("label");
+      label.textContent = labelText;
+      if (wide) label.className = "wide";
+      const input = document.createElement(multiline ? "textarea" : "input");
+      input.value = Array.isArray(value) ? value.join(", ") : (value || "");
+      input.dataset.field = field;
+      if (field === "image") input.setAttribute("list", "media-options");
+      label.append(input);
+      return label;
+    }
+
+    function readTags(value) {
+      return String(value || "").split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 6);
+    }
+
+    function render() {
+      list.replaceChildren();
+      countEl.textContent = String(items.length);
+      items.forEach((item, index) => {
+        const article = document.createElement("article");
+        article.className = "product";
+        article.dataset.index = String(index);
+
+        const preview = document.createElement("div");
+        preview.className = "preview";
+        const image = document.createElement("img");
+        image.alt = item.title || "Produto Abrahams";
+        image.src = item.image || "/media/collection-detail.png";
+        preview.append(image);
+
+        const body = document.createElement("div");
+        const head = document.createElement("div");
+        head.className = "product-head";
+        const titleWrap = document.createElement("div");
+        const small = document.createElement("p");
+        small.className = "kicker";
+        small.textContent = item.label || "Linha";
+        const title = document.createElement("h2");
+        title.textContent = item.title || "Produto";
+        titleWrap.append(small, title);
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "danger";
+        remove.dataset.action = "remove";
+        remove.textContent = "Remover";
+        head.append(titleWrap, remove);
+
+        const form = document.createElement("div");
+        form.className = "product-form";
+        form.append(
+          makeField("Titulo", "title", item.title),
+          makeField("Etiqueta", "label", item.label),
+          makeField("Imagem", "image", item.image, true),
+          makeField("Descricao", "text", item.text, true, true),
+          makeField("Tags separadas por virgula", "tags", item.tags, true)
+        );
+
+        body.append(head, form);
+        article.append(preview, body);
+        list.append(article);
+      });
+    }
+
+    list.addEventListener("input", (event) => {
+      const field = event.target.dataset.field;
+      const card = event.target.closest(".product");
+      if (!field || !card) return;
+      const item = items[Number(card.dataset.index)];
+      if (!item) return;
+      if (field === "tags") {
+        item.tags = readTags(event.target.value);
+      } else {
+        item[field] = event.target.value;
+      }
+      if (field === "title") {
+        card.querySelector("h2").textContent = item.title || "Produto";
+        card.querySelector("img").alt = item.title || "Produto Abrahams";
+      }
+      if (field === "label") {
+        card.querySelector(".kicker").textContent = item.label || "Linha";
+      }
+      if (field === "image") {
+        card.querySelector("img").src = item.image || "/media/collection-detail.png";
+      }
+      setStatus("Alteracao ainda nao salva.", "");
+    });
+
+    list.addEventListener("click", (event) => {
+      if (event.target.dataset.action !== "remove") return;
+      const card = event.target.closest(".product");
+      const index = Number(card.dataset.index);
+      items.splice(index, 1);
+      render();
+      setStatus("Produto removido da tela. Clique em Salvar catalogo para confirmar.", "");
+    });
+
+    document.getElementById("add-product").addEventListener("click", () => {
+      items.push({
+        id: "",
+        title: "Novo produto",
+        label: "Linha",
+        image: "/media/collection-detail.png",
+        text: "Descricao do produto para aparecer no catalogo.",
+        tags: ["Novo"]
+      });
+      render();
+      list.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setStatus("Novo produto criado. Edite os campos e salve.", "");
+    });
+
+    saveButton.addEventListener("click", async () => {
+      saveButton.disabled = true;
+      setStatus("Salvando catalogo...", "");
+      try {
+        const response = await fetch("/api/admin/catalogo?key=" + encodeURIComponent(adminKey), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ items })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Nao foi possivel salvar.");
+        items = data.items || items;
+        render();
+        setStatus("Catalogo salvo. O site ja esta usando esses produtos.", "ok");
+      } catch (error) {
+        setStatus(error.message || "Erro ao salvar catalogo.", "error");
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+
+    render();
+  </script>
 </body>
 </html>`;
 }
@@ -308,6 +611,83 @@ function cleanLongText(value, maxLength = 1400) {
     .replace(/[ \t]+/g, " ")
     .trim()
     .slice(0, maxLength);
+}
+
+function slugify(value) {
+  return cleanText(value, 80)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70);
+}
+
+function normalizeCatalogImage(value) {
+  const image = cleanText(value, 260);
+  if (!image) {
+    return "/media/collection-detail.png";
+  }
+  if (image.startsWith("/") || image.startsWith("https://") || image.startsWith("http://")) {
+    return image;
+  }
+  return "/media/collection-detail.png";
+}
+
+function normalizeCatalogTags(value) {
+  const raw = Array.isArray(value) ? value : String(value || "").split(",");
+  return raw
+    .map((tag) => cleanText(tag, 34))
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function sanitizeCatalogItem(item, index, usedIds) {
+  if (!item || typeof item !== "object") {
+    throw makeHttpError(400, "Produto invalido no catalogo.");
+  }
+
+  const title = cleanText(item.title, 80);
+  const text = cleanLongText(item.text, 360);
+  if (!title || !text) {
+    throw makeHttpError(400, "Cada produto precisa de titulo e descricao.");
+  }
+
+  let id = slugify(item.id || title) || `produto-${index + 1}`;
+  while (usedIds.has(id)) {
+    id = `${id}-${index + 1}`;
+  }
+  usedIds.add(id);
+
+  return {
+    id,
+    title,
+    label: cleanText(item.label, 42) || "Linha",
+    image: normalizeCatalogImage(item.image),
+    text,
+    tags: normalizeCatalogTags(item.tags)
+  };
+}
+
+function sanitizeCatalogList(value) {
+  const rawItems = Array.isArray(value) ? value : [];
+  const usedIds = new Set();
+  const items = rawItems.slice(0, 80).map((item, index) => sanitizeCatalogItem(item, index, usedIds));
+  if (!items.length) {
+    throw makeHttpError(400, "O catalogo precisa de pelo menos um produto.");
+  }
+  return items;
+}
+
+function publicCatalogItem(item) {
+  return {
+    id: item.id,
+    title: item.title,
+    label: item.label,
+    image: item.image,
+    text: item.text,
+    tags: Array.isArray(item.tags) ? item.tags : []
+  };
 }
 
 function isEmail(value) {
@@ -383,9 +763,57 @@ async function saveBookings(bookings) {
   }
 }
 
+async function loadCatalog() {
+  if (!catalogDiskPersistenceEnabled) {
+    return inMemoryCatalog.length ? inMemoryCatalog : defaultCatalogItems;
+  }
+
+  try {
+    const data = await withTimeout(readFile(catalogPath, "utf8"), "Leitura do catalogo");
+    const parsed = JSON.parse(data);
+    const items = sanitizeCatalogList(Array.isArray(parsed) ? parsed : parsed.items);
+    inMemoryCatalog = items;
+    return items;
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      inMemoryCatalog = defaultCatalogItems;
+      return defaultCatalogItems;
+    }
+    catalogDiskPersistenceEnabled = false;
+    console.warn(`Catalogo em modo memoria: ${error.message}`);
+    return inMemoryCatalog.length ? inMemoryCatalog : defaultCatalogItems;
+  }
+}
+
+async function saveCatalog(items) {
+  const cleanItems = sanitizeCatalogList(items);
+  inMemoryCatalog = cleanItems;
+  if (!catalogDiskPersistenceEnabled) {
+    return cleanItems;
+  }
+
+  try {
+    await withTimeout(mkdir(privateDataRoot, { recursive: true }), "Criacao da pasta do catalogo");
+    await withTimeout(
+      writeFile(catalogPath, `${JSON.stringify({ updatedAt: new Date().toISOString(), items: cleanItems }, null, 2)}\n`, "utf8"),
+      "Gravacao do catalogo"
+    );
+  } catch (error) {
+    catalogDiskPersistenceEnabled = false;
+    console.warn(`Catalogo em modo memoria: ${error.message}`);
+  }
+  return cleanItems;
+}
+
 function withBookingLock(task) {
   const run = bookingWriteQueue.then(task, task);
   bookingWriteQueue = run.catch(() => {});
+  return run;
+}
+
+function withCatalogLock(task) {
+  const run = catalogWriteQueue.then(task, task);
+  catalogWriteQueue = run.catch(() => {});
   return run;
 }
 
@@ -954,6 +1382,56 @@ createServer(async (request, response) => {
         "Cache-Control": "no-store"
       });
       response.end(renderAdminPage(bookings));
+      return;
+    }
+
+    if (cleanUrl === "/admin/catalogo" && request.method === "GET") {
+      ensureAdmin(request);
+      const catalog = await loadCatalog();
+      response.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store"
+      });
+      response.end(renderCatalogAdminPage(catalog, requestUrl(request).searchParams.get("key")));
+      return;
+    }
+
+    if (cleanUrl === "/api/catalogo" && request.method === "GET") {
+      const catalog = await loadCatalog();
+      sendJson(response, 200, {
+        ok: true,
+        count: catalog.length,
+        items: catalog.map(publicCatalogItem)
+      });
+      return;
+    }
+
+    if (cleanUrl === "/api/admin/catalogo" && request.method === "GET") {
+      ensureAdmin(request);
+      const catalog = await loadCatalog();
+      sendJson(response, 200, {
+        ok: true,
+        count: catalog.length,
+        media: Object.keys(mediaFiles),
+        items: catalog.map(publicCatalogItem)
+      });
+      return;
+    }
+
+    if (cleanUrl === "/api/admin/catalogo" && (request.method === "PUT" || request.method === "POST")) {
+      ensureAdmin(request);
+      let payload;
+      try {
+        payload = JSON.parse((await readRequestBody(request)).replace(/^\uFEFF/, "") || "{}");
+      } catch {
+        throw makeHttpError(400, "JSON invalido.");
+      }
+      const catalog = await withCatalogLock(async () => saveCatalog(payload.items));
+      sendJson(response, 200, {
+        ok: true,
+        count: catalog.length,
+        items: catalog.map(publicCatalogItem)
+      });
       return;
     }
 
