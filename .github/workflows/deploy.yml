@@ -35,6 +35,11 @@ on:
         description: "Data do evento do cliente"
         required: false
         type: string
+      calendar_id:
+        description: "ID da agenda Google"
+        required: false
+        type: string
+        default: "camila@cibellanoivas.com"
   repository_dispatch:
     types:
       - abrahams_booking_created
@@ -49,10 +54,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-      GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
-      GOOGLE_CALENDAR_ID: ${{ vars.GCP_CALENDAR_ID || 'primary' }}
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'trusty-field-459814-a9' }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT || 'abrahams-test@trusty-field-459814-a9.iam.gserviceaccount.com' }}
+      GOOGLE_CALENDAR_ID: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.calendar_id || inputs.calendar_id || vars.GCP_CALENDAR_ID || 'camila@cibellanoivas.com' }}
       BOOKING_NAME: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.name || inputs.name }}
       BOOKING_SEGMENT: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.segment || inputs.segment }}
       BOOKING_DATE: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.date || inputs.date }}
@@ -66,14 +71,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate booking and Google configuration
+        run: |
+          node <<'NODE'
+          const requiredConfig = ["GCP_PROJECT_ID", "GCP_WORKLOAD_IDENTITY_PROVIDER", "GCP_SERVICE_ACCOUNT", "GOOGLE_CALENDAR_ID"];
+          const missingConfig = requiredConfig.filter((key) => !process.env[key]);
+          if (missingConfig.length) {
+            throw new Error(`Missing GitHub repository variables/secrets: ${missingConfig.join(", ")}`);
+          }
+          if (process.env.GCP_WORKLOAD_IDENTITY_PROVIDER.includes("PROJECT_NUMBER")) {
+            throw new Error("GCP_WORKLOAD_IDENTITY_PROVIDER still contains PROJECT_NUMBER. Replace it with the numeric Google Cloud project number.");
+          }
+
+          const requiredBooking = ["BOOKING_NAME", "BOOKING_SEGMENT", "BOOKING_DATE", "BOOKING_TIME"];
+          const missingBooking = requiredBooking.filter((key) => !process.env[key]);
+          if (missingBooking.length) {
+            throw new Error(`Missing booking values: ${missingBooking.join(", ")}`);
+          }
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(process.env.BOOKING_DATE) || !/^\d{2}:\d{2}$/.test(process.env.BOOKING_TIME)) {
+            throw new Error("Invalid booking date/time. Use YYYY-MM-DD and HH:mm, for example 2026-02-14 and 15:30.");
+          }
+          NODE
+
       - name: Auth to Google Cloud without JSON key
         id: auth
         uses: google-github-actions/auth@v2
         with:
           token_format: access_token
-          project_id: ${{ vars.GCP_PROJECT_ID }}
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
           access_token_scopes: https://www.googleapis.com/auth/calendar.events
 
       - name: Create Google Calendar event
@@ -83,34 +110,31 @@ jobs:
           node <<'NODE'
           const required = ["BOOKING_NAME", "BOOKING_SEGMENT", "BOOKING_DATE", "BOOKING_TIME", "GOOGLE_ACCESS_TOKEN"];
           const missing = required.filter((key) => !process.env[key]);
-          if (missing.length) throw new Error(`Missing required values: ${missing.join(", ")}`);
+          if (missing.length) {
+            throw new Error(`Missing required values: ${missing.join(", ")}`);
+          }
 
-          const calendarId = process.env.GOOGLE_CALENDAR_ID || "primary";
+          const calendarId = process.env.GOOGLE_CALENDAR_ID || "camila@cibellanoivas.com";
           const selectedDate = process.env.BOOKING_DATE;
           const selectedTime = process.env.BOOKING_TIME;
+          const [year, month, day] = selectedDate.split("-").map(Number);
           const [hour, minute] = selectedTime.split(":").map(Number);
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate) || !Number.isInteger(hour) || !Number.isInteger(minute)) throw new Error("Invalid date/time.");
+
+          if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day) || !Number.isInteger(hour) || !Number.isInteger(minute)) {
+            throw new Error("Invalid date/time. Expected YYYY-MM-DD and HH:mm.");
+          }
 
           const pad = (value) => String(value).padStart(2, "0");
-          const addMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60_000);
-          const toSaoPauloDateTime = (date) => {
-            const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
-              timeZone: "America/Sao_Paulo",
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-              hourCycle: "h23"
-            }).formatToParts(date).map((part) => [part.type, part.value]));
-            return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:00-03:00`;
+          const addMinutes = (minutes) => {
+            const date = new Date(Date.UTC(year, month - 1, day, hour, minute + minutes, 0));
+            return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}T${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:00-03:00`;
           };
 
-          const base = new Date(`${selectedDate}T${pad(hour)}:${pad(minute)}:00-03:00`);
-          const start = addMinutes(base, -5);
-          const end = addMinutes(base, 75);
+          const start = addMinutes(-5);
+          const end = addMinutes(75);
           const name = process.env.BOOKING_NAME.trim();
           const segment = process.env.BOOKING_SEGMENT.trim();
+
           const event = {
             summary: `${segment} - ${name}`,
             location: "R. Joao Amaro, 31 - Cidade Moncoes, Sao Paulo - SP, 04583-030",
@@ -120,23 +144,38 @@ jobs:
               `Cliente: ${name}`,
               `Segmento: ${segment}`,
               `Horario escolhido: ${selectedDate} ${selectedTime}`,
-              `Janela no calendario: ${toSaoPauloDateTime(start)} ate ${toSaoPauloDateTime(end)}`,
+              `Janela no calendario: ${start} ate ${end}`,
               process.env.BOOKING_EMAIL ? `E-mail: ${process.env.BOOKING_EMAIL}` : "",
               process.env.BOOKING_PHONE ? `WhatsApp: ${process.env.BOOKING_PHONE}` : "",
               process.env.BOOKING_EVENT_DATE ? `Data do evento: ${process.env.BOOKING_EVENT_DATE}` : "",
               process.env.BOOKING_NOTES ? `Observacoes: ${process.env.BOOKING_NOTES}` : ""
             ].filter(Boolean).join("\n"),
-            start: { dateTime: toSaoPauloDateTime(start), timeZone: "America/Sao_Paulo" },
-            end: { dateTime: toSaoPauloDateTime(end), timeZone: "America/Sao_Paulo" },
-            reminders: { useDefault: false, overrides: [{ method: "popup", minutes: 60 }, { method: "email", minutes: 1440 }] }
+            start: { dateTime: start, timeZone: "America/Sao_Paulo" },
+            end: { dateTime: end, timeZone: "America/Sao_Paulo" },
+            reminders: {
+              useDefault: false,
+              overrides: [
+                { method: "popup", minutes: 60 },
+                { method: "email", minutes: 1440 }
+              ]
+            }
           };
 
-          const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
+          const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
+          const response = await fetch(url, {
             method: "POST",
-            headers: { Authorization: `Bearer ${process.env.GOOGLE_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+            headers: {
+              Authorization: `Bearer ${process.env.GOOGLE_ACCESS_TOKEN}`,
+              "Content-Type": "application/json"
+            },
             body: JSON.stringify(event)
           });
+
           const payload = await response.json().catch(() => ({}));
-          if (!response.ok) { console.error(JSON.stringify(payload, null, 2)); throw new Error(`Google Calendar API failed: ${response.status}`); }
+          if (!response.ok) {
+            console.error(JSON.stringify(payload, null, 2));
+            throw new Error(`Google Calendar API failed: ${response.status}`);
+          }
+
           console.log(`Created calendar event: ${payload.htmlLink || payload.id}`);
           NODE
