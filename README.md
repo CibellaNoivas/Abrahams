@@ -1,69 +1,54 @@
 # Abrahams by Cibella Group
 
-Landing page responsiva para uma marca masculina de alfaiataria, camisas e acessórios.
+Premium menswear landing page for Abrahams by Cibella Group, focused on suits, tailoring, shirts, blazers, social pants, ties, bow ties and cufflinks.
 
-## Como executar
+## Run locally
 
 ```bash
 node server.mjs
 ```
 
-Depois abra `http://localhost:4173`.
+Then open `http://localhost:4173`.
 
-No Windows, você também pode executar:
+## What is included
 
-```bat
-start-server.cmd
+- Premium responsive landing page with dark navy, ivory and soft gold identity.
+- Modern menswear catalog: suits, social pants, blazers, shirts, bow ties, ties and cufflinks.
+- Smooth editorial animations and luxury fashion atmosphere.
+- Booking form with availability.
+- Store WhatsApp: `+55 11 91561-4927`.
+- GitHub Actions workflow for adding bookings to Google Calendar through Workload Identity Federation.
+- No Google service account JSON key and no `credentials_json`.
+
+## Contacts
+
+- WhatsApp Abrahams: `+55 11 91561-4927`
+- Email: `ibrahimhakkialtin@gmail.com`
+- Email: `taner@cibellanoivas.com`
+- Email: `camila@cibellanoivas.com`
+
+## Google Calendar integration
+
+The backend dispatches `repository_dispatch` events to GitHub Actions. The workflow then authenticates to Google Cloud with Workload Identity Federation and creates the booking in Google Calendar.
+
+Set these GitHub Actions secrets exactly:
+
+```txt
+GCP_PROJECT_ID=trusty-field-459814-a9
+GCP_PROJECT_NUMBER=299661583209
+GCP_SERVICE_ACCOUNT=abrahams-test@trusty-field-459814-a9.iam.gserviceaccount.com
+GCP_WORKLOAD_IDENTITY_PROVIDER=projects/299661583209/locations/global/workloadIdentityPools/github-actions-pool/providers/github
+GOOGLE_CALENDAR_ID=camila@cibellanoivas.com
 ```
 
-O projeto usa React e Tailwind CSS em modo estático, com um pequeno servidor Node para mídia, agenda e envio de e-mail.
+For live booking dispatch from the Node server, set these runtime environment variables where the server is deployed:
 
-## Editar produtos
-
-O catalogo agora pode ser editado pelo painel privado:
-
-```text
-http://localhost:4173/admin/catalogo?key=abrahams2026
+```txt
+GITHUB_REPOSITORY=CibellaNoivas/Abrahams
+GITHUB_DISPATCH_TOKEN=your_github_token
+GITHUB_DISPATCH_EVENT_TYPE=abrahams_booking_created
+GOOGLE_CALENDAR_ID=camila@cibellanoivas.com
+COMPANY_WHATSAPP=5511915614927
 ```
 
-Nesse painel voce pode adicionar produto, remover produto, trocar titulo, etiqueta, descricao, tags e imagem. Depois de clicar em `Salvar catalogo`, a secao `Catalogo` do site passa a usar os novos produtos automaticamente.
-
-Os produtos ficam salvos em `%LOCALAPPDATA%\AbrahamsSite\catalogo.json`. Se esse arquivo ainda nao existir, o site usa o catalogo padrao do projeto.
-
-## Agendamento
-
-A seção `Agendamento` mostra horários disponíveis de segunda a sexta, das 09:00 às 18:00, e sábado, das 09:00 às 13:00. Domingo fica fechado. Cada atendimento reserva 1h30, grava solicitações em `%LOCALAPPDATA%\AbrahamsSite\agendamentos.json` e bloqueia o mesmo horário depois que alguém envia o formulário.
-
-O e-mail automático usa SMTP. Antes de iniciar o servidor em produção, configure:
-
-```powershell
-$env:BOOKING_TO_EMAIL="ibrahimhakkialtin@gmail.com,taner@cibellanoivas.com"
-$env:CALENDAR_ATTENDEE_EMAILS="ibrahimhakkialtin@gmail.com,taner@cibellanoivas.com"
-$env:SMTP_HOST="smtp.gmail.com"
-$env:SMTP_PORT="587"
-$env:SMTP_USER="seu-email@gmail.com"
-$env:SMTP_PASS="sua-senha-de-app"
-$env:SMTP_FROM="Abrahams Agendamento <seu-email@gmail.com>"
-node server.mjs
-```
-
-Sem SMTP configurado, o agendamento fica salvo no servidor, mas o e-mail e o convite de calendário não são disparados.
-
-`BOOKING_TO_EMAIL` recebe o relatório completo. `CALENDAR_ATTENDEE_EMAILS` define quem entra como convidado no evento de calendário. Se `CALENDAR_ATTENDEE_EMAILS` não for informado, o sistema usa a mesma lista de `BOOKING_TO_EMAIL`.
-
-## O que foi incluído
-
-- Hero cinematográfico com imagens Abrahams e mudança automática.
-- Header com logo que muda de cor em áreas claras e escuras.
-- Catálogo para ternos, calças, blazers, camisas, gravatas-borboleta, gravatas e abotoaduras.
-- Painel privado para adicionar, remover e editar produtos do catalogo.
-- Atelier, lookbook editorial, agendamento e contato.
-- Formulário com nome, idade, e-mail, WhatsApp, segmento procurado, data do evento e detalhes de curadoria.
-- Convite `.ics` no e-mail para o agendamento aparecer no Google Calendar/Outlook dos colaboradores.
-- WhatsApp Abrahams: `+55 11 91561-4927`.
-- Emails: `ibrahimhakkialtin@gmail.com`, `taner@cibellanoivas.com` e `camila@cibellanoivas.com`.
-- Agendamentos salvos localmente em `%LOCALAPPDATA%\AbrahamsSite\agendamentos.json`.
-- Integração opcional com GitHub Actions/Google Calendar via `repository_dispatch`.
-- Workload Identity Provider padrão: `projects/299661583209/locations/global/workloadIdentityPools/github-actions-pool/providers/github`.
-- Project ID padrão: `trusty-field-459814-a9`.
-- Service account padrão: `abrahams-test@trusty-field-459814-a9.iam.gserviceaccount.com`.
+The calendar event title is `segment - customer name`. Each appointment is created for 90 minutes in `America/Sao_Paulo`.
