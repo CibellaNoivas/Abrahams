@@ -90,9 +90,21 @@ jobs:
           const selectedTime = process.env.BOOKING_TIME;
           const [hour, minute] = selectedTime.split(":").map(Number);
           if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate) || !Number.isInteger(hour) || !Number.isInteger(minute)) throw new Error("Invalid date/time.");
+
           const pad = (value) => String(value).padStart(2, "0");
           const addMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60_000);
-          const toSaoPauloDateTime = (date) => `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}T${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:00-03:00`;
+          const toSaoPauloDateTime = (date) => {
+            const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+              timeZone: "America/Sao_Paulo",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              hourCycle: "h23"
+            }).formatToParts(date).map((part) => [part.type, part.value]));
+            return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:00-03:00`;
+          };
 
           const base = new Date(`${selectedDate}T${pad(hour)}:${pad(minute)}:00-03:00`);
           const start = addMinutes(base, -5);
