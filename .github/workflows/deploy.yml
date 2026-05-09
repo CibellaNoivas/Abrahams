@@ -54,9 +54,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'trusty-field-459814-a9' }}
-      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-      GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT || 'abrahams-test@trusty-field-459814-a9.iam.gserviceaccount.com' }}
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'trusty-field-459814-g9' }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER || 'projects/299661583209/locations/global/workloadIdentityPools/github-actions-pool/providers/github' }}
+      GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT || 'abrahams-test@trusty-field-459814-g9.iam.gserviceaccount.com' }}
       GOOGLE_CALENDAR_ID: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.calendar_id || inputs.calendar_id || vars.GCP_CALENDAR_ID || 'camila@cibellanoivas.com' }}
       BOOKING_NAME: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.name || inputs.name }}
       BOOKING_SEGMENT: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.segment || inputs.segment }}
