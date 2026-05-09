@@ -1,0 +1,10 @@
+{
+  "name": "abrahams-by-cibella-group",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Premium menswear landing page for Abrahams by Cibella Group.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}
