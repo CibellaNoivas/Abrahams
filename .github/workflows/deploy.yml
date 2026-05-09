@@ -54,10 +54,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'trusty-field-459814-g9' }}
-      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER || 'projects/299661583209/locations/global/workloadIdentityPools/github-actions-pool/providers/github' }}
-      GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT || 'abrahams-test@trusty-field-459814-g9.iam.gserviceaccount.com' }}
-      GOOGLE_CALENDAR_ID: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.calendar_id || inputs.calendar_id || vars.GCP_CALENDAR_ID || 'camila@cibellanoivas.com' }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      GOOGLE_CALENDAR_ID: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.calendar_id || inputs.calendar_id || secrets.GOOGLE_CALENDAR_ID }}
       BOOKING_NAME: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.name || inputs.name }}
       BOOKING_SEGMENT: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.segment || inputs.segment }}
       BOOKING_DATE: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.date || inputs.date }}
@@ -75,13 +76,25 @@ jobs:
       - name: Validate booking and Google configuration
         run: |
           node <<'NODE'
-          const requiredConfig = ["GCP_PROJECT_ID", "GCP_WORKLOAD_IDENTITY_PROVIDER", "GCP_SERVICE_ACCOUNT", "GOOGLE_CALENDAR_ID"];
+          const requiredConfig = ["GCP_PROJECT_ID", "GCP_PROJECT_NUMBER", "GCP_WORKLOAD_IDENTITY_PROVIDER", "GCP_SERVICE_ACCOUNT", "GOOGLE_CALENDAR_ID"];
           const missingConfig = requiredConfig.filter((key) => !process.env[key]);
           if (missingConfig.length) {
-            throw new Error(`Missing GitHub repository variables/secrets: ${missingConfig.join(", ")}`);
+            throw new Error(`Missing GitHub repository secrets: ${missingConfig.join(", ")}`);
+          }
+          if (process.env.GCP_PROJECT_ID !== "trusty-field-459814-a9") {
+            throw new Error(`Unexpected GCP_PROJECT_ID: ${process.env.GCP_PROJECT_ID}. Expected trusty-field-459814-a9.`);
+          }
+          if (process.env.GCP_PROJECT_NUMBER !== "299661583209") {
+            throw new Error(`Unexpected GCP_PROJECT_NUMBER: ${process.env.GCP_PROJECT_NUMBER}. Expected 299661583209.`);
           }
           if (process.env.GCP_WORKLOAD_IDENTITY_PROVIDER.includes("PROJECT_NUMBER")) {
             throw new Error("GCP_WORKLOAD_IDENTITY_PROVIDER still contains PROJECT_NUMBER. Replace it with the numeric Google Cloud project number.");
+          }
+          if (!process.env.GCP_WORKLOAD_IDENTITY_PROVIDER.includes(`projects/${process.env.GCP_PROJECT_NUMBER}/`)) {
+            throw new Error("GCP_WORKLOAD_IDENTITY_PROVIDER does not contain the configured project number.");
+          }
+          if (!process.env.GCP_SERVICE_ACCOUNT.endsWith("@trusty-field-459814-a9.iam.gserviceaccount.com")) {
+            throw new Error(`Unexpected GCP_SERVICE_ACCOUNT: ${process.env.GCP_SERVICE_ACCOUNT}.`);
           }
 
           const requiredBooking = ["BOOKING_NAME", "BOOKING_SEGMENT", "BOOKING_DATE", "BOOKING_TIME"];
@@ -91,6 +104,21 @@ jobs:
           }
           if (!/^\d{4}-\d{2}-\d{2}$/.test(process.env.BOOKING_DATE) || !/^\d{2}:\d{2}$/.test(process.env.BOOKING_TIME)) {
             throw new Error("Invalid booking date/time. Use YYYY-MM-DD and HH:mm, for example 2026-02-14 and 15:30.");
+          }
+          NODE
+
+      - name: Debug Google configuration
+        run: |
+          node <<'NODE'
+          const values = {
+            projectId: process.env.GCP_PROJECT_ID,
+            projectNumber: process.env.GCP_PROJECT_NUMBER,
+            serviceAccount: process.env.GCP_SERVICE_ACCOUNT,
+            workloadIdentityProvider: process.env.GCP_WORKLOAD_IDENTITY_PROVIDER,
+            calendarId: process.env.GOOGLE_CALENDAR_ID
+          };
+          for (const [key, value] of Object.entries(values)) {
+            console.log(`${key}: ${value}`);
           }
           NODE
 
@@ -109,13 +137,13 @@ jobs:
           GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
           node <<'NODE'
-          const required = ["BOOKING_NAME", "BOOKING_SEGMENT", "BOOKING_DATE", "BOOKING_TIME", "GOOGLE_ACCESS_TOKEN"];
+          const required = ["BOOKING_NAME", "BOOKING_SEGMENT", "BOOKING_DATE", "BOOKING_TIME", "GOOGLE_ACCESS_TOKEN", "GOOGLE_CALENDAR_ID"];
           const missing = required.filter((key) => !process.env[key]);
           if (missing.length) {
             throw new Error(`Missing required values: ${missing.join(", ")}`);
           }
 
-          const calendarId = process.env.GOOGLE_CALENDAR_ID || "camila@cibellanoivas.com";
+          const calendarId = process.env.GOOGLE_CALENDAR_ID;
           const selectedDate = process.env.BOOKING_DATE;
           const selectedTime = process.env.BOOKING_TIME;
           const [year, month, day] = selectedDate.split("-").map(Number);
