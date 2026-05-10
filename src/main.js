@@ -680,7 +680,7 @@
           catalogItems.map((item, index) =>
             h(
               "article",
-              { key: item.title, className: `catalog-card reveal ${index === 0 ? "is-featured" : ""}` },
+              { key: item.title, id: `catalogo-${item.id}`, className: `catalog-card reveal ${index === 0 ? "is-featured" : ""}` },
               h("div", { className: "catalog-media" }, h("img", { src: item.image, alt: item.title })),
               h(
                 "div",
@@ -735,7 +735,7 @@
                 h("h3", null, item.title),
                 h("p", null, item.detail || item.text),
                 h("ul", null, item.tags.map((tag) => h("li", { key: tag }, tag))),
-                h("div", { className: "category-actions" }, Button({ href: "#agendamento", variant: "primary", children: "Agendar curadoria" }), Button({ href: whatsappUrl, variant: "outline", children: "WhatsApp" }))
+                h("div", { className: "category-actions" }, Button({ href: "#agendamento", variant: "primary", children: "Agendar curadoria" }), Button({ href: `#catalogo-${item.id}`, variant: "outline", children: "Catálogo" }))
               )
             )
           )
@@ -1217,8 +1217,11 @@
           h("a", { href: instagramUrl, target: "_blank", rel: "noopener noreferrer" }, "Instagram"),
           h("a", { href: whatsappUrl }, "WhatsApp"),
           emails.map((email) => h("a", { key: email, href: `mailto:${email}` }, email)),
-          h("p", null, `© ${year} Abrahams by Cibella Group.`),
-          h("a", { className: "admin-console-link", href: "/admin/login", "aria-label": "Acesso interno Abrahams" }, "console")
+          h(
+            "p",
+            null,
+            h("a", { className: "copyright-admin-link", href: "/admin/login", "aria-label": "Acesso interno Abrahams" }, `© ${year} Abrahams by Cibella Group.`)
+          )
         )
       )
     );
