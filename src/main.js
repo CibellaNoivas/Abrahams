@@ -32,12 +32,12 @@
   };
 
   const navItems = [
-    ["Início", "#inicio"],
-    ["Catálogo", "#catalogo"],
-    ["Atelier", "#atelier"],
-    ["Lookbook", "#lookbook"],
-    ["Agendamento", "#agendamento"],
-    ["Contato", "#contato"]
+    ["Início", "/#inicio"],
+    ["Catálogo", "/catalogo"],
+    ["Atelier", "/#atelier"],
+    ["Lookbook", "/#lookbook"],
+    ["Agendamento", "/#agendamento"],
+    ["Contato", "/#contato"]
   ];
 
   const catalogItems = [
@@ -106,6 +106,102 @@
     }
   ];
 
+  const productCatalog = [
+    { category: "ternos", name: "Terno Navy Slim", image: media.suit, description: "Terno azul-marinho de corte moderno para casamento, formatura e ocasiões formais.", tags: ["Slim", "Navy", "Evento"] },
+    { category: "ternos", name: "Terno Grafite Social", image: media.event, description: "Base elegante para trabalho, cerimônia e noite, com leitura sofisticada e discreta.", tags: ["Grafite", "Social", "Versátil"] },
+    { category: "ternos", name: "Terno Cerimonial Clássico", image: media.atelierDark, description: "Silhueta clássica com presença limpa para noivos, padrinhos e fotos de alto impacto.", tags: ["Clássico", "Noivo", "Cerimônia"] },
+    { category: "calcas", name: "Calça Social Reta", image: media.event, description: "Calça de alfaiataria para compor traje completo ou visual social do dia a dia.", tags: ["Reta", "Social", "Base"] },
+    { category: "calcas", name: "Calça Slim Navy", image: media.casual, description: "Peça de encaixe fácil com blazer, camisa branca e sapato social.", tags: ["Slim", "Navy", "Urbano"] },
+    { category: "blazers", name: "Blazer Azul Noturno", image: media.casual, description: "Blazer moderno para elevar eventos, reuniões e composições smart casual.", tags: ["Blazer", "Navy", "Smart"] },
+    { category: "blazers", name: "Blazer Texturizado", image: media.fabric, description: "Textura discreta para quem quer presença sem parecer exagerado.", tags: ["Textura", "Evento", "Moderno"] },
+    { category: "camisas", name: "Camisa Branca Essencial", image: media.shirts, description: "Camisa social limpa para noivos, padrinhos e traje executivo.", tags: ["Branca", "Colarinho", "Essencial"] },
+    { category: "camisas", name: "Camisa Azul Clara", image: media.shirts, description: "Base elegante para blazer navy, calça social e visual de trabalho.", tags: ["Azul", "Social", "Algodão"] },
+    { category: "gravatas-borboleta", name: "Gravata-borboleta Black Tie", image: media.fabric, description: "Papillon formal para cerimônias noturnas e composições de gala.", tags: ["Black tie", "Cetim", "Noite"] },
+    { category: "gravatas-borboleta", name: "Gravata-borboleta Navy", image: media.detail, description: "Opção sofisticada para casamento e eventos com paleta azul.", tags: ["Navy", "Cerimônia", "Formal"] },
+    { category: "gravatas", name: "Gravata Champagne", image: media.detail, description: "Tom elegante para padrinhos, cerimônias e recepções com acabamento claro.", tags: ["Champagne", "Padrinho", "Evento"] },
+    { category: "gravatas", name: "Gravata Lisa Navy", image: media.fabric, description: "Gravata sóbria para trabalho, casamento e combinações formais.", tags: ["Lisa", "Navy", "Formal"] },
+    { category: "abotoaduras", name: "Abotoadura Metal Clássica", image: media.atelierDark, description: "Detalhe de acabamento para camisa social e traje completo.", tags: ["Metal", "Camisa", "Detalhe"] },
+    { category: "abotoaduras", name: "Abotoadura Cerimonial", image: media.detail, description: "Pequeno acessório para finalizar o visual de noivo, padrinho ou convidado formal.", tags: ["Cerimônia", "Presente", "Social"] }
+  ];
+
+  function normalizeSearchText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+
+  function inferProductCategory(item) {
+    const searchable = normalizeSearchText([item.id, item.title, item.label, item.text, ...(item.tags || [])].join(" "));
+    const direct = catalogItems.find((category) => searchable.includes(normalizeSearchText(category.id)));
+    if (direct) {
+      return direct.id;
+    }
+    if (/calca|social reta|alfaiataria/.test(searchable)) {
+      return "calcas";
+    }
+    if (/blazer|smart casual/.test(searchable)) {
+      return "blazers";
+    }
+    if (/camisa|colarinho|punho/.test(searchable)) {
+      return "camisas";
+    }
+    if (/borboleta|papillon|black tie/.test(searchable)) {
+      return "gravatas-borboleta";
+    }
+    if (/gravata/.test(searchable)) {
+      return "gravatas";
+    }
+    if (/abotoadura|metal|presente/.test(searchable)) {
+      return "abotoaduras";
+    }
+    return "ternos";
+  }
+
+  function apiCatalogItemToProduct(item) {
+    if (!item || typeof item !== "object") {
+      return null;
+    }
+    const category = inferProductCategory(item);
+    const categoryInfo = catalogItems.find((entry) => entry.id === category) || catalogItems[0];
+    return {
+      category,
+      name: item.title || categoryInfo.title,
+      image: item.image || categoryInfo.image,
+      description: item.text || categoryInfo.detail,
+      tags: Array.isArray(item.tags) && item.tags.length ? item.tags : categoryInfo.tags
+    };
+  }
+
+  function isLegacyCatalogCategory(item) {
+    const id = normalizeSearchText(item?.id);
+    const title = normalizeSearchText(item?.title);
+    return catalogItems.some((category) => id === normalizeSearchText(category.id) || title === normalizeSearchText(category.title));
+  }
+
+  function shouldShowApiCatalogItem(item) {
+    if (!item || !item.title || !item.text) {
+      return false;
+    }
+    if (isLegacyCatalogCategory(item)) {
+      return false;
+    }
+    return String(item.text).trim().length >= 18;
+  }
+
+  function mergeProducts(apiProducts) {
+    const seen = new Set();
+    const merged = [];
+    [...apiProducts, ...productCatalog].forEach((product) => {
+      const key = `${product.category}:${normalizeSearchText(product.name)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(product);
+      }
+    });
+    return merged;
+  }
+
   const lookbook = [
     { category: "Atelier", image: media.blueAtelier, title: "Azul noturno e precisão" },
     { category: "Abrahams", image: media.atelierDark, title: "Sala de atendimento privado" },
@@ -152,7 +248,7 @@
   function BrandMark({ light = false }) {
     return h(
       "a",
-      { href: "#inicio", className: `brand-mark ${light ? "is-light" : ""}`, "aria-label": "Abrahams by Cibella Group" },
+      { href: "/#inicio", className: `brand-mark ${light ? "is-light" : ""}`, "aria-label": "Abrahams by Cibella Group" },
       h("strong", null, "ABRAHAMS"),
       h("span", null, "by Cibella Group")
     );
@@ -195,7 +291,7 @@
         { className: "header-shell" },
         h(BrandMark, { light: logoLight }),
         h("nav", { className: "desktop-nav", "aria-label": "Navegação principal" }, links),
-        h("a", { href: "#agendamento", className: "header-cta" }, "Agendar"),
+        h("a", { href: "/#agendamento", className: "header-cta" }, "Agendar"),
         h(
           "button",
           {
@@ -212,7 +308,7 @@
       h(
         "div",
         { className: `mobile-menu ${open ? "is-visible" : ""}` },
-        h("nav", null, links, Button({ href: "#agendamento", className: "mt-5 w-full", children: "Agendar visita" }))
+        h("nav", null, links, Button({ href: "/#agendamento", className: "mt-5 w-full", children: "Agendar visita" }))
       )
     );
   }
@@ -249,7 +345,7 @@
           h("p", { className: "eyebrow" }, "Abrahams by Cibella Group"),
           h("h1", null, slide.title),
           h("p", { className: "hero-lede" }, "Ternos, blazers, calças, camisas e acessórios para homens que querem chegar bem em casamento, evento, trabalho e rotina."),
-          h("div", { className: "hero-actions" }, Button({ href: "#catalogo", variant: "light", children: "Ver catálogo" }), Button({ href: "#agendamento", variant: "ghost", children: "Atendimento privado" }))
+          h("div", { className: "hero-actions" }, Button({ href: "/catalogo", variant: "light", children: "Ver catálogo" }), Button({ href: "#agendamento", variant: "ghost", children: "Atendimento privado" }))
         ),
         h(
           "div",
@@ -735,12 +831,109 @@
                 h("h3", null, item.title),
                 h("p", null, item.detail || item.text),
                 h("ul", null, item.tags.map((tag) => h("li", { key: tag }, tag))),
-                h("div", { className: "category-actions" }, Button({ href: "#agendamento", variant: "primary", children: "Agendar curadoria" }), Button({ href: `#catalogo-${item.id}`, variant: "outline", children: "Catálogo" }))
+                h("div", { className: "category-actions" }, Button({ href: "#agendamento", variant: "primary", children: "Agendar curadoria" }), Button({ href: `/catalogo?categoria=${item.id}`, variant: "outline", children: "Catálogo" }))
               )
             )
           )
         )
       )
+    );
+  }
+
+  function ProductCatalogPage() {
+    const readCategory = () => new URLSearchParams(window.location.search).get("categoria") || "todos";
+    const [activeCategory, setActiveCategory] = useState(readCategory);
+    const [liveProducts, setLiveProducts] = useState(productCatalog);
+    const selectedCategory = catalogItems.find((item) => item.id === activeCategory);
+    const filteredProducts = activeCategory === "todos" ? liveProducts : liveProducts.filter((product) => product.category === activeCategory);
+    const products = filteredProducts.length ? filteredProducts : productCatalog.filter((product) => product.category === activeCategory);
+
+    const chooseCategory = (categoryId) => {
+      setActiveCategory(categoryId);
+      const url = categoryId === "todos" ? "/catalogo" : `/catalogo?categoria=${categoryId}`;
+      window.history.pushState({}, "", url);
+    };
+
+    useEffect(() => {
+      const onPopState = () => setActiveCategory(readCategory());
+      window.addEventListener("popstate", onPopState);
+      return () => window.removeEventListener("popstate", onPopState);
+    }, []);
+
+    useEffect(() => {
+      let isActive = true;
+      fetch("/api/catalogo")
+        .then((response) => (response.ok ? response.json() : Promise.reject(new Error("Catalogo indisponivel"))))
+        .then((payload) => {
+          const items = Array.isArray(payload.items) ? payload.items.filter(shouldShowApiCatalogItem).map(apiCatalogItemToProduct).filter(Boolean) : [];
+          if (isActive && items.length) {
+            setLiveProducts(mergeProducts(items));
+          }
+        })
+        .catch(() => {
+          if (isActive) {
+            setLiveProducts(productCatalog);
+          }
+        });
+      return () => {
+        isActive = false;
+      };
+    }, []);
+
+    return h(
+      React.Fragment,
+      null,
+      h(Header),
+      h(
+        "main",
+        { className: "catalog-page", "data-header-theme": "light" },
+        h(
+          "section",
+          { className: "catalog-page-hero" },
+          h(
+            "div",
+            { className: "catalog-page-copy reveal is-visible" },
+            h("p", { className: "eyebrow" }, "Catálogo Abrahams"),
+            h("h1", null, selectedCategory ? selectedCategory.title : "Produtos masculinos"),
+            h("p", null, selectedCategory ? selectedCategory.detail : "Ternos, blazers, calças, camisas, gravatas, gravatas-borboleta e abotoaduras para montar o visual completo.")
+          ),
+          h("figure", { className: "catalog-page-image reveal is-visible" }, h("img", { src: selectedCategory?.image || media.suit, alt: selectedCategory?.title || "Catálogo Abrahams" }))
+        ),
+        h(
+          "section",
+          { className: "catalog-page-body" },
+          h(
+            "nav",
+            { className: "catalog-tabs", "aria-label": "Categorias do catálogo" },
+            h("button", { type: "button", className: activeCategory === "todos" ? "is-active" : "", onClick: () => chooseCategory("todos") }, "Todos"),
+            catalogItems.map((item) =>
+              h("button", { key: item.id, type: "button", className: activeCategory === item.id ? "is-active" : "", onClick: () => chooseCategory(item.id) }, item.title)
+            )
+          ),
+          h(
+            "div",
+            { className: "product-grid" },
+            products.map((product) =>
+              h(
+                "article",
+                { key: `${product.category}-${product.name}`, className: "product-card" },
+                h("div", { className: "product-card-media" }, h("img", { src: product.image, alt: product.name })),
+                h(
+                  "div",
+                  { className: "product-card-copy" },
+                  h("span", null, catalogItems.find((item) => item.id === product.category)?.title || "Abrahams"),
+                  h("h2", null, product.name),
+                  h("p", null, product.description),
+                  h("ul", null, product.tags.map((tag) => h("li", { key: tag }, tag))),
+                  h("a", { href: "/#agendamento" }, "Agendar curadoria")
+                )
+              )
+            )
+          )
+        )
+      ),
+      h(Footer),
+      h(FloatingWhatsapp)
     );
   }
 
@@ -1228,6 +1421,8 @@
   }
 
   function App() {
+    const isCatalogRoute = window.location.pathname.replace(/\/+$/, "") === "/catalogo";
+
     useEffect(() => {
       const items = document.querySelectorAll(".reveal");
       const observer = new IntersectionObserver(
@@ -1259,6 +1454,10 @@
         window.removeEventListener("hashchange", scrollToHash);
       };
     }, []);
+
+    if (isCatalogRoute) {
+      return h(ProductCatalogPage);
+    }
 
     return h(
       React.Fragment,

@@ -113,62 +113,21 @@ const mediaFiles = {
 };
 
 const defaultCatalogItems = [
-  {
-    id: "ternos",
-    title: "Ternos",
-    label: "Cerimonial",
-    image: "/media/look-business.png",
-    text: "Ternos slim e clássicos para casamento, eventos e rotina executiva com caimento preciso.",
-    tags: ["Slim", "Clássico", "Sob medida visual"]
-  },
-  {
-    id: "calcas-de-alfaiataria",
-    title: "Calças de alfaiataria",
-    label: "Base",
-    image: "/media/event-look.png",
-    text: "Calças sociais em cortes atuais, pensadas para compor traje completo ou smart casual.",
-    tags: ["Social", "Reta", "Slim"]
-  },
-  {
-    id: "blazers",
-    title: "Blazers",
-    label: "Smart",
-    image: "/media/look-casual.png",
-    text: "Blazers modernos para elevar camisa, malha leve ou composição de evento sem excesso.",
-    tags: ["Navy", "Grafite", "Texturizado"]
-  },
-  {
-    id: "camisas",
-    title: "Camisas",
-    label: "Essencial",
-    image: "/media/shirts.png",
-    text: "Camisas brancas, azuis e bases formais para noivos, padrinhos e atendimento corporativo.",
-    tags: ["Colarinho", "Punho", "Algodão"]
-  },
-  {
-    id: "gravatas-borboleta",
-    title: "Gravatas-borboleta",
-    label: "Black tie",
-    image: "/media/navy-fabric.png",
-    text: "Papillons para cerimônias noturnas, black tie e looks com assinatura mais formal.",
-    tags: ["Preto", "Navy", "Cetim"]
-  },
-  {
-    id: "gravatas",
-    title: "Gravatas",
-    label: "Formal",
-    image: "/media/collection-detail.png",
-    text: "Gravatas discretas para casamento, formatura, eventos corporativos e recepções.",
-    tags: ["Lisa", "Textura", "Champagne"]
-  },
-  {
-    id: "abotoaduras",
-    title: "Abotoaduras",
-    label: "Detalhe",
-    image: "/media/abrahams-atelier-dark.png",
-    text: "Abotoaduras e pequenos acabamentos para finalizar o traje com presença silenciosa.",
-    tags: ["Metal", "Cerimônia", "Presente"]
-  }
+  { id: "terno-navy-slim", title: "Terno Navy Slim", label: "Ternos", image: "/media/look-business.png", text: "Terno azul-marinho de corte moderno para casamento, formatura e ocasiões formais.", tags: ["Slim", "Navy", "Evento"] },
+  { id: "terno-grafite-social", title: "Terno Grafite Social", label: "Ternos", image: "/media/event-look.png", text: "Base elegante para trabalho, cerimônia e noite, com leitura sofisticada e discreta.", tags: ["Grafite", "Social", "Versátil"] },
+  { id: "terno-cerimonial-classico", title: "Terno Cerimonial Clássico", label: "Ternos", image: "/media/abrahams-atelier-dark.png", text: "Silhueta clássica com presença limpa para noivos, padrinhos e fotos de alto impacto.", tags: ["Clássico", "Noivo", "Cerimônia"] },
+  { id: "calca-social-reta", title: "Calça Social Reta", label: "Calças", image: "/media/event-look.png", text: "Calça de alfaiataria para compor traje completo ou visual social do dia a dia.", tags: ["Reta", "Social", "Base"] },
+  { id: "calca-slim-navy", title: "Calça Slim Navy", label: "Calças", image: "/media/look-casual.png", text: "Peça de encaixe fácil com blazer, camisa branca e sapato social.", tags: ["Slim", "Navy", "Urbano"] },
+  { id: "blazer-azul-noturno", title: "Blazer Azul Noturno", label: "Blazers", image: "/media/look-casual.png", text: "Blazer moderno para elevar eventos, reuniões e composições smart casual.", tags: ["Blazer", "Navy", "Smart"] },
+  { id: "blazer-texturizado", title: "Blazer Texturizado", label: "Blazers", image: "/media/navy-fabric.png", text: "Textura discreta para quem quer presença sem parecer exagerado.", tags: ["Textura", "Evento", "Moderno"] },
+  { id: "camisa-branca-essencial", title: "Camisa Branca Essencial", label: "Camisas", image: "/media/shirts.png", text: "Camisa social limpa para noivos, padrinhos e traje executivo.", tags: ["Branca", "Colarinho", "Essencial"] },
+  { id: "camisa-azul-clara", title: "Camisa Azul Clara", label: "Camisas", image: "/media/shirts.png", text: "Base elegante para blazer navy, calça social e visual de trabalho.", tags: ["Azul", "Social", "Algodão"] },
+  { id: "gravata-borboleta-black-tie", title: "Gravata-borboleta Black Tie", label: "Borboleta", image: "/media/navy-fabric.png", text: "Papillon formal para cerimônias noturnas e composições de gala.", tags: ["Black tie", "Cetim", "Noite"] },
+  { id: "gravata-borboleta-navy", title: "Gravata-borboleta Navy", label: "Borboleta", image: "/media/collection-detail.png", text: "Opção sofisticada para casamento e eventos com paleta azul.", tags: ["Navy", "Cerimônia", "Formal"] },
+  { id: "gravata-champagne", title: "Gravata Champagne", label: "Gravatas", image: "/media/collection-detail.png", text: "Tom elegante para padrinhos, cerimônias e recepções com acabamento claro.", tags: ["Champagne", "Padrinho", "Evento"] },
+  { id: "gravata-lisa-navy", title: "Gravata Lisa Navy", label: "Gravatas", image: "/media/navy-fabric.png", text: "Gravata sóbria para trabalho, casamento e combinações formais.", tags: ["Lisa", "Navy", "Formal"] },
+  { id: "abotoadura-metal-classica", title: "Abotoadura Metal Clássica", label: "Abotoaduras", image: "/media/abrahams-atelier-dark.png", text: "Detalhe de acabamento para camisa social e traje completo.", tags: ["Metal", "Camisa", "Detalhe"] },
+  { id: "abotoadura-cerimonial", title: "Abotoadura Cerimonial", label: "Abotoaduras", image: "/media/collection-detail.png", text: "Pequeno acessório para finalizar o visual de noivo, padrinho ou convidado formal.", tags: ["Cerimônia", "Presente", "Social"] }
 ];
 
 function resolvePath(url) {
@@ -514,7 +473,7 @@ function renderCatalogAdminPage(items, key) {
         <button type="button" class="primary" id="save-catalog">Salvar catalogo</button>
       </div>
       <div class="toolbar-actions">
-        <a class="link-button" href="/?catalogo=1#catalogo" target="_blank" rel="noopener noreferrer">Ver site</a>
+        <a class="link-button" href="/catalogo" target="_blank" rel="noopener noreferrer">Ver catalogo no site</a>
         <a class="link-button" href="/admin?key=${encodeURIComponent(key || "")}">Agendamentos</a>
       </div>
     </section>
@@ -1588,6 +1547,16 @@ createServer(async (request, response) => {
         count: bookings.length,
         bookings: bookings.map(publicBooking)
       });
+      return;
+    }
+
+    if ((cleanUrl === "/catalogo" || cleanUrl === "/catalogo/") && request.method === "GET") {
+      const data = await readFile(join(root, "index.html"));
+      response.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store"
+      });
+      response.end(data);
       return;
     }
 
