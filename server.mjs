@@ -23,6 +23,10 @@ const githubDispatchToken = process.env.GITHUB_DISPATCH_TOKEN || process.env.GH_
 const githubDispatchEventType = process.env.GITHUB_DISPATCH_EVENT_TYPE || "abrahams_booking_created";
 const googleCalendarId = process.env.GOOGLE_CALENDAR_ID || process.env.GCP_CALENDAR_ID || "camila@cibellanoivas.com";
 const adminKey = process.env.ADMIN_KEY || "abrahams2026";
+const adminConsoleUser = process.env.ADMIN_CONSOLE_USER || "ADMINABRAHAMS";
+const adminConsolePassword = process.env.ADMIN_CONSOLE_PASSWORD || "04583030";
+const adminCookieName = "abrahams_admin";
+const adminCookieValue = Buffer.from(`${adminConsoleUser}:${adminConsolePassword}:${adminKey}`).toString("base64url");
 const companyWhatsappNumber = process.env.COMPANY_WHATSAPP || "5511915614927";
 const supportedSegments = new Set([
   "Noivo",
@@ -207,9 +211,30 @@ function requestUrl(request) {
   return new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
 }
 
-function ensureAdmin(request) {
+function cookieValue(request, name) {
+  const cookieHeader = request.headers.cookie || "";
+  const cookies = cookieHeader.split(";").map((part) => part.trim()).filter(Boolean);
+  for (const cookie of cookies) {
+    const separator = cookie.indexOf("=");
+    if (separator === -1) {
+      continue;
+    }
+    const key = cookie.slice(0, separator);
+    const value = cookie.slice(separator + 1);
+    if (key === name) {
+      return decodeURIComponent(value);
+    }
+  }
+  return "";
+}
+
+function isAdminRequest(request) {
   const key = requestUrl(request).searchParams.get("key");
-  if (!adminKey || key !== adminKey) {
+  return Boolean((adminKey && key === adminKey) || cookieValue(request, adminCookieName) === adminCookieValue);
+}
+
+function ensureAdmin(request) {
+  if (!isAdminRequest(request)) {
     throw makeHttpError(401, "Acesso restrito. Informe a chave correta.");
   }
 }
@@ -336,6 +361,86 @@ function renderAdminPage(bookings) {
       </div>
     </header>
     <section class="grid">${rows || '<p class="empty">Ainda nao ha agendamentos recebidos.</p>'}</section>
+  </main>
+</body>
+</html>`;
+}
+
+function renderAdminLoginPage(errorMessage = "") {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Console interno | Abrahams</title>
+  <style>
+    :root { color-scheme: dark; --navy:#071744; --ink:#f8f3ea; --gold:#cfad68; --line:rgba(248,243,234,.16); }
+    * { box-sizing:border-box; }
+    body { min-height:100vh; margin:0; display:grid; place-items:center; background:radial-gradient(circle at 30% 0%, #233a63, var(--navy) 42%, #050914); color:var(--ink); font-family:Manrope, Inter, Arial, sans-serif; }
+    main { width:min(430px, calc(100% - 32px)); border:1px solid var(--line); border-radius:8px; background:rgba(248,243,234,.07); padding:28px; backdrop-filter:blur(18px); }
+    p { color:rgba(248,243,234,.66); line-height:1.6; }
+    .kicker { margin:0 0 8px; color:var(--gold); font-size:12px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
+    h1 { margin:0; font-family:Georgia, serif; font-size:44px; font-weight:400; letter-spacing:.14em; }
+    form { display:grid; gap:14px; margin-top:22px; }
+    label { display:grid; gap:7px; color:rgba(248,243,234,.72); font-size:11px; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+    input { width:100%; border:1px solid var(--line); border-radius:6px; background:rgba(248,243,234,.92); color:#111827; padding:14px; font:700 15px/1.3 Manrope, Arial, sans-serif; outline:none; }
+    input:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(207,173,104,.18); }
+    button, a { min-height:46px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; text-transform:uppercase; letter-spacing:.13em; font-weight:900; font-size:12px; }
+    button { border:1px solid var(--gold); background:var(--gold); color:#071744; cursor:pointer; }
+    a { color:rgba(248,243,234,.72); }
+    .error { border:1px solid rgba(255,140,120,.36); border-radius:6px; background:rgba(255,140,120,.1); color:#ffd1c7; padding:12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="kicker">Acesso reservado</p>
+    <h1>ABRAHAMS</h1>
+    <p>Console interno para equipe. Use o nome e a senha definidos para o site.</p>
+    ${errorMessage ? `<p class="error">${escapeHtml(errorMessage)}</p>` : ""}
+    <form method="post" action="/admin/login">
+      <label>Nome<input name="username" autocomplete="username" required autofocus></label>
+      <label>Senha<input name="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Entrar no console</button>
+      <a href="/">Voltar ao site</a>
+    </form>
+  </main>
+</body>
+</html>`;
+}
+
+function renderAdminConsolePage() {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Console | Abrahams</title>
+  <style>
+    :root { color-scheme: dark; --navy:#071744; --ink:#f8f3ea; --gold:#cfad68; --line:rgba(248,243,234,.16); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(circle at 12% 0%, #22365f, var(--navy) 40%, #050914); color:var(--ink); font-family:Manrope, Inter, Arial, sans-serif; }
+    main { width:min(940px, calc(100% - 32px)); margin:0 auto; padding:54px 0; }
+    h1 { margin:0; font-family:Georgia, serif; font-size:clamp(40px, 8vw, 86px); font-weight:400; letter-spacing:.18em; }
+    p { color:rgba(248,243,234,.66); line-height:1.7; }
+    .kicker { color:var(--gold); text-transform:uppercase; letter-spacing:.16em; font-size:12px; font-weight:900; }
+    .grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; margin-top:30px; }
+    a { display:grid; gap:10px; min-height:180px; border:1px solid var(--line); border-radius:8px; background:rgba(248,243,234,.07); color:inherit; text-decoration:none; padding:22px; transition:transform 180ms ease, border-color 180ms ease; }
+    a:hover { transform:translateY(-2px); border-color:var(--gold); }
+    strong { color:var(--gold); text-transform:uppercase; letter-spacing:.13em; font-size:12px; }
+    span { font-size:26px; font-weight:800; }
+    small { color:rgba(248,243,234,.62); line-height:1.55; }
+    @media (max-width:720px){ .grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="kicker">Console interno</p>
+    <h1>ABRAHAMS</h1>
+    <p>Escolha o que precisa administrar.</p>
+    <section class="grid">
+      <a href="/admin"><strong>Agenda</strong><span>Agendamentos</span><small>Ver pedidos recebidos, contatos, detalhes e WhatsApp do cliente.</small></a>
+      <a href="/admin/catalogo"><strong>Catalogo</strong><span>Produtos</span><small>Editar categorias, imagens, textos e produtos do catalogo.</small></a>
+    </section>
   </main>
 </body>
 </html>`;
@@ -1374,6 +1479,46 @@ async function dispatchCalendarWorkflow(booking) {
 createServer(async (request, response) => {
   const cleanUrl = decodeURIComponent((request.url || "/").split("?")[0]);
   try {
+    if (cleanUrl === "/admin/login" && request.method === "GET") {
+      response.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store"
+      });
+      response.end(renderAdminLoginPage());
+      return;
+    }
+
+    if (cleanUrl === "/admin/login" && request.method === "POST") {
+      const form = new URLSearchParams(await readRequestBody(request));
+      const username = cleanText(form.get("username"), 80);
+      const password = cleanText(form.get("password"), 80);
+      if (username !== adminConsoleUser || password !== adminConsolePassword) {
+        response.writeHead(401, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store"
+        });
+        response.end(renderAdminLoginPage("Nome ou senha incorretos."));
+        return;
+      }
+      response.writeHead(303, {
+        Location: "/admin/console",
+        "Set-Cookie": `${adminCookieName}=${encodeURIComponent(adminCookieValue)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`,
+        "Cache-Control": "no-store"
+      });
+      response.end();
+      return;
+    }
+
+    if (cleanUrl === "/admin/console" && request.method === "GET") {
+      ensureAdmin(request);
+      response.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store"
+      });
+      response.end(renderAdminConsolePage());
+      return;
+    }
+
     if (cleanUrl === "/admin" && request.method === "GET") {
       ensureAdmin(request);
       const bookings = await loadBookings();

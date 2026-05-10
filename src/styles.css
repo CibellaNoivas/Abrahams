@@ -766,6 +766,149 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.catalog-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.catalog-links a:first-child {
+  color: var(--navy);
+}
+
+.category-section {
+  background:
+    linear-gradient(180deg, var(--ivory), #efe5d7 48%, var(--ivory));
+}
+
+.category-jump {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: -1rem auto 3rem;
+}
+
+.category-jump a {
+  border: 1px solid rgba(7, 23, 68, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 250, 242, 0.72);
+  color: rgba(7, 23, 68, 0.82);
+  padding: 0.7rem 0.95rem;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.category-jump a:hover {
+  border-color: var(--champagne);
+  color: var(--rosewood);
+  transform: translateY(-1px);
+}
+
+.category-list {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.category-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 2rem;
+  align-items: stretch;
+  min-height: 440px;
+  border: 1px solid rgba(7, 23, 68, 0.11);
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.82);
+  overflow: hidden;
+  scroll-margin-top: 110px;
+}
+
+.category-panel:target {
+  border-color: rgba(199, 168, 107, 0.74);
+  box-shadow: 0 24px 70px rgba(7, 23, 68, 0.13);
+}
+
+.category-panel.is-reverse {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
+.category-panel.is-reverse .category-panel-media {
+  order: 2;
+}
+
+.category-panel-media {
+  min-height: 100%;
+  background: var(--charcoal);
+}
+
+.category-panel-media img {
+  width: 100%;
+  height: 100%;
+  min-height: 440px;
+  object-fit: cover;
+}
+
+.category-panel-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.4rem, 4vw, 3.2rem);
+}
+
+.category-panel-copy > span {
+  color: var(--champagne);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.category-panel-copy h3 {
+  margin: 0.5rem 0 1rem;
+  color: var(--navy);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(3rem, 7vw, 6.4rem);
+  font-weight: 500;
+  line-height: 0.9;
+}
+
+.category-panel-copy p {
+  max-width: 620px;
+  margin: 0;
+  color: rgba(22, 22, 22, 0.7);
+  font-size: 1.04rem;
+  line-height: 1.85;
+}
+
+.category-panel-copy ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-panel-copy li {
+  border: 1px solid rgba(7, 23, 68, 0.12);
+  border-radius: 999px;
+  padding: 0.42rem 0.62rem;
+  color: rgba(7, 23, 68, 0.72);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.category-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
 .atelier-section {
   background:
     linear-gradient(135deg, rgba(7, 23, 68, 0.94), rgba(22, 22, 22, 0.88)),
@@ -1356,6 +1499,21 @@ button:disabled {
   color: var(--champagne);
 }
 
+.footer .admin-console-link {
+  display: block;
+  width: max-content;
+  margin: 1.15rem 0 0 auto;
+  color: rgba(251, 247, 239, 0.16);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.footer .admin-console-link:hover,
+.footer .admin-console-link:focus-visible {
+  color: var(--champagne);
+}
+
 @keyframes cinematicDrift {
   from {
     transform: scale(1.04) translate3d(-0.5%, -0.4%, 0);
@@ -1502,14 +1660,30 @@ button:disabled {
 
   .hero-control,
   .catalog-grid,
+  .category-panel,
+  .category-panel.is-reverse,
   .swatch-row,
   .time-grid,
   .form-grid {
     grid-template-columns: 1fr;
   }
 
+  .category-panel.is-reverse .category-panel-media {
+    order: 0;
+  }
+
+  .category-panel,
+  .category-panel-media img {
+    min-height: 0;
+  }
+
+  .category-panel-media img {
+    aspect-ratio: 4 / 3;
+  }
+
   .hero-actions,
-  .contact-actions {
+  .contact-actions,
+  .category-actions {
     display: grid;
   }
 
@@ -1574,6 +1748,10 @@ button:disabled {
 
   .footer a {
     margin: 0.9rem 0.9rem 0 0;
+  }
+
+  .footer .admin-console-link {
+    margin-left: 0;
   }
 }
 

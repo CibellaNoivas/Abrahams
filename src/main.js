@@ -14,6 +14,7 @@
   const whatsappNumber = "5511915614927";
   const whatsappUrl =
     `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Olá, quero atendimento Abrahams by Cibella Group.")}`;
+  const instagramUrl = "https://www.instagram.com/abrahamsbycn/";
   const emails = ["ibrahimhakkialtin@gmail.com", "taner@cibellanoivas.com", "camila@cibellanoivas.com"];
   const scheduleNote = "Segunda a sexta, 09:00 às 18:00. Sábado, 09:00 às 13:00. Domingo fechado.";
 
@@ -41,53 +42,67 @@
 
   const catalogItems = [
     {
+      id: "ternos",
       title: "Ternos",
       label: "Cerimonial",
       image: media.suit,
       text: "Ternos slim e clássicos para casamento, eventos e rotina executiva com caimento preciso.",
-      tags: ["Slim", "Clássico", "Sob medida visual"]
+      tags: ["Slim", "Clássico", "Sob medida visual"],
+      detail: "Para noivos, padrinhos, formaturas e eventos sociais, com foco em proporção, ombro limpo e presença sem exagero."
     },
     {
+      id: "calcas",
       title: "Calças de alfaiataria",
       label: "Base",
       image: media.event,
       text: "Calças sociais em cortes atuais, pensadas para compor traje completo ou smart casual.",
-      tags: ["Social", "Reta", "Slim"]
+      tags: ["Social", "Reta", "Slim"],
+      detail: "Base versátil para montar combinações com blazer, camisa, malha leve ou traje completo para trabalho e evento."
     },
     {
+      id: "blazers",
       title: "Blazers",
       label: "Smart",
       image: media.casual,
       text: "Blazers modernos para elevar camisa, malha leve ou composição de evento sem excesso.",
-      tags: ["Navy", "Grafite", "Texturizado"]
+      tags: ["Navy", "Grafite", "Texturizado"],
+      detail: "Uma peça de transição para rotina, jantar, reunião e ocasiões em que o visual precisa ficar mais refinado."
     },
     {
+      id: "camisas",
       title: "Camisas",
       label: "Essencial",
       image: media.shirts,
       text: "Camisas brancas, azuis e bases formais para noivos, padrinhos e atendimento corporativo.",
-      tags: ["Colarinho", "Punho", "Algodão"]
+      tags: ["Colarinho", "Punho", "Algodão"],
+      detail: "Camisas limpas e elegantes para sustentar o traje, equilibrando colarinho, punho, tecido e caimento."
     },
     {
+      id: "gravatas-borboleta",
       title: "Gravatas-borboleta",
       label: "Black tie",
       image: media.fabric,
       text: "Papillons para cerimônias noturnas, black tie e looks com assinatura mais formal.",
-      tags: ["Preto", "Navy", "Cetim"]
+      tags: ["Preto", "Navy", "Cetim"],
+      detail: "Acessório certo para cerimônias noturnas, black tie e composições com leitura mais sofisticada."
     },
     {
+      id: "gravatas",
       title: "Gravatas",
       label: "Formal",
       image: media.detail,
       text: "Gravatas discretas para casamento, formatura, eventos corporativos e recepções.",
-      tags: ["Lisa", "Textura", "Champagne"]
+      tags: ["Lisa", "Textura", "Champagne"],
+      detail: "Modelos em tons sóbrios e texturas controladas para fechar o traje sem competir com o conjunto."
     },
     {
+      id: "abotoaduras",
       title: "Abotoaduras",
       label: "Detalhe",
       image: media.atelierDark,
       text: "Abotoaduras e pequenos acabamentos para finalizar o traje com presença silenciosa.",
-      tags: ["Metal", "Cerimônia", "Presente"]
+      tags: ["Metal", "Cerimônia", "Presente"],
+      detail: "Detalhes pequenos, mas importantes, para camisa social, cerimônia, presente e acabamento final do visual."
     }
   ];
 
@@ -671,10 +686,56 @@
                 "div",
                 { className: "catalog-content" },
                 h("span", null, item.label),
-                h("h3", null, item.title),
+                h("h3", null, h("a", { href: `#categoria-${item.id}` }, item.title)),
                 h("p", null, item.text),
                 h("ul", null, item.tags.map((tag) => h("li", { key: tag }, tag))),
-                h("a", { href: whatsappUrl }, "Consultar peça")
+                h(
+                  "div",
+                  { className: "catalog-links" },
+                  h("a", { href: `#categoria-${item.id}` }, "Ver categoria"),
+                  h("a", { href: whatsappUrl, target: "_blank", rel: "noopener noreferrer" }, "Consultar peça")
+                )
+              )
+            )
+          )
+        )
+      )
+    );
+  }
+
+  function CategoryShowcase() {
+    return h(
+      "section",
+      { id: "categorias", className: "category-section section-pad", "data-header-theme": "light" },
+      h(
+        "div",
+        { className: "section-wrap" },
+        h(SectionIntro, {
+          eyebrow: "Categorias",
+          title: "Entre direto na peça que procura.",
+          text: "Cada linha tem uma leitura própria. Escolha a categoria e fale com a equipe para montar o visual completo."
+        }),
+        h(
+          "nav",
+          { className: "category-jump reveal", "aria-label": "Categorias Abrahams" },
+          catalogItems.map((item) => h("a", { key: item.id, href: `#categoria-${item.id}` }, item.title))
+        ),
+        h(
+          "div",
+          { className: "category-list" },
+          catalogItems.map((item, index) =>
+            h(
+              "article",
+              { key: item.id, id: `categoria-${item.id}`, className: `category-panel reveal ${index % 2 ? "is-reverse" : ""}` },
+              h("div", { className: "category-panel-media" }, h("img", { src: item.image, alt: item.title })),
+              h(
+                "div",
+                { className: "category-panel-copy" },
+                h("span", null, item.label),
+                h("h3", null, item.title),
+                h("p", null, item.detail || item.text),
+                h("ul", null, item.tags.map((tag) => h("li", { key: tag }, tag))),
+                h("div", { className: "category-actions" }, Button({ href: "#agendamento", variant: "primary", children: "Agendar curadoria" }), Button({ href: whatsappUrl, variant: "outline", children: "WhatsApp" }))
               )
             )
           )
@@ -1092,6 +1153,7 @@
             "div",
             { className: "contact-lines" },
             h("a", { href: whatsappUrl }, `WhatsApp Abrahams ${phoneDisplay}`),
+            h("a", { href: instagramUrl, target: "_blank", rel: "noopener noreferrer" }, "Instagram @abrahamsbycn"),
             emails.map((email) => h("a", { key: email, href: `mailto:${email}` }, email))
           ),
           h("div", { className: "contact-actions" }, Button({ href: "#agendamento", variant: "primary", children: "Agendar visita" }), Button({ href: whatsappUrl, variant: "outline", children: "WhatsApp Abrahams" }))
@@ -1152,10 +1214,11 @@
         h(
           "div",
           null,
-          h("a", { href: "https://www.instagram.com/" }, "Instagram"),
+          h("a", { href: instagramUrl, target: "_blank", rel: "noopener noreferrer" }, "Instagram"),
           h("a", { href: whatsappUrl }, "WhatsApp"),
           emails.map((email) => h("a", { key: email, href: `mailto:${email}` }, email)),
-          h("p", null, `© ${year} Abrahams by Cibella Group.`)
+          h("p", null, `© ${year} Abrahams by Cibella Group.`),
+          h("a", { className: "admin-console-link", href: "/admin/login", "aria-label": "Acesso interno Abrahams" }, "console")
         )
       )
     );
@@ -1198,7 +1261,7 @@
       React.Fragment,
       null,
       h(Header),
-      h("main", null, h(Hero), h(AtelierMotion), h(Identity), h(Catalog), h(Atelier), h(Lookbook), h(Scheduling), h(Contact), h(FinalCta)),
+      h("main", null, h(Hero), h(AtelierMotion), h(Identity), h(Catalog), h(CategoryShowcase), h(Atelier), h(Lookbook), h(Scheduling), h(Contact), h(FinalCta)),
       h(Footer),
       h(FloatingWhatsapp)
     );
